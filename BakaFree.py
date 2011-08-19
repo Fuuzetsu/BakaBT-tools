@@ -1,5 +1,5 @@
-#Uses your cookies to search BakaBT for torrents that are freeleech AND bonus
-#Possible features: Small torrents with bonus points download, check over time for new torrents
+#Uses your cookies to search BakaBT for torrents that are freeleech 
+#Possible features: Small torrents only
 #>comments
 
 import re, shutil, socket, http.cookiejar, urllib.request, urllib.parse, urllib.error 
