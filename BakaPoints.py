@@ -3,7 +3,7 @@
 #using wget because it just werks. Change WINDOZE to True if you don't have wget
 #>comments
 
-import re, shutil, socket, http.cookiejar, urllib.request, urllib.parse, urllib.error 
+import re, shutil, socket, http.cookiejar, urllib.request, urllib.parse, urllib.error
 
 USERNAME = ''
 PASSWORD = ''
@@ -22,7 +22,7 @@ def getLinks(pageSource):
         if 'Alternative versions:' in s:
             x = s.find('Alternative versions:')
             splitAlts.append(s[:x])
-            h = s[x:] 
+            h = s[x:]
             while '<tr class="torrent_alt' in h:
                 x = h.find('<tr class="torrent_alt')
                 z = h.find('</tr>')
@@ -30,7 +30,7 @@ def getLinks(pageSource):
                 h = h[z + 5:]
         else:
             splitAlts.append(s)
-    
+
     bn = '<img src="/images/pixel.gif" class="icon bonusbig" alt="Bonus" title="Bonus"/>'
     fr = '<span class="success" title="Freeleech">[F]</span>'
 
@@ -39,18 +39,18 @@ def getLinks(pageSource):
     #sections = ripped out sections with both, bonus and freeleech
     extracted = []
     for s in sections:
-        e = re.search(r'<a href="(/\d+[\w\d-]+.html)" style="color: #[\d\w]+;">', s)       
+        e = re.search(r'<a href="(/\d+[\w\d-]+.html)" style="color: #[\d\w]+;">', s)
         #e = re.search(r'<a href="(/\d+[-][-_\w\d.]+.html)"', s)
         if not e == None:
             extracted.append(e.groups()[0])
-        
+
     if extracted == []:
         print('No appropriate torrents to download.')
     return extracted
 
 def getPages(pageSource):
     pageSource = pageSource[pageSource.find('<div class="pager">') + len('<div class="pager">'):]
-    pageSource = pageSource[:pageSource.find('</div>')]          
+    pageSource = pageSource[:pageSource.find('</div>')]
     pages = re.findall(r'<a href="(/browse.php\?ordertype=size&amp;bonus=1&amp;q=&amp;only=1&amp;order=1&amp;limit=\d+&amp;page=\d+)" class="">\d', pageSource)
     return pages
 
@@ -59,11 +59,11 @@ def getTorrents(url):
         source = opener.open(URL_BASE + url)
     except:
         print(URL_BASE + url, 'threw an exception')
-        
+
     source = source.read().decode("utf8", 'ignore')
     tr = URL_BASE + re.search('<a href="(/download/\d+/\d+/\w+/\d+/[\w_.-]+.torrent)"', source).groups()[0]
     return tr
-    
+
 def download(url):
     if not WINDOZE:
         shutil.os.system('wget -t 10 -T 5 -N -q %s' % url)
@@ -109,7 +109,7 @@ else:
     print('Logged in as %s' % USERNAME)
 
 
-source = opener.open('http://bakabt.com/browse.php?ordertype=size&bonus=1&q=&only=1&order=1&limit=100&page=0')    
+source = opener.open('http://bakabt.com/browse.php?ordertype=size&bonus=1&q=&only=1&order=1&limit=100&page=0')
 source = source.read().decode("utf8", 'ignore')
 
 links = getLinks(source)
@@ -127,14 +127,14 @@ x = open('Extracts.txt', 'w')
 for l in links:
     x.write(URL_BASE + l + '\n')
 x.close()
-print('Extracted %d links that are bonus and freeleech.\nNow getting links to .torrent files' % len(links))       
+print('Extracted %d links that are bonus and freeleech.\nNow getting links to .torrent files' % len(links))
 
 totalToGet = len(links)
 torrentFiles = []
-for index, link in enumerate(links):   
+for index, link in enumerate(links):
     print('Getting link %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
     torrentFiles.append(getTorrents(link))
-    
+
 print('Got links. Now downloading the files.')
 totalToGet = len(torrentFiles)
 if not shutil.os.path.exists('BakaBT torrents script'):
@@ -143,6 +143,6 @@ shutil.os.chdir('BakaBT torrents script')
 for index, torrent in enumerate(torrentFiles):
     print('Downloading .torrent %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
     download(torrent)
-    
+
 
 print('\nDone.')

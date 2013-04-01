@@ -1,8 +1,8 @@
-#Uses your cookies to search BakaBT for torrents that are freeleech 
+#Uses your cookies to search BakaBT for torrents that are freeleech
 #Possible features: Small torrents only
 #>comments
 
-import re, shutil, socket, http.cookiejar, urllib.request, urllib.parse, urllib.error 
+import re, shutil, socket, http.cookiejar, urllib.request, urllib.parse, urllib.error
 
 USERNAME = ''
 PASSWORD = ''
@@ -16,9 +16,9 @@ def getLinks(pageSource):
         cutOff = pageSource.find('<td class="category"')
         sections.append(pageSource[:cutOff])
         pageSource = pageSource[cutOff + 24:]
-        
+
     sections.append(pageSource)
-    
+
     splitAlts = []
     for s in sections:
         if 'Alternative versions:' in s:
@@ -34,7 +34,7 @@ def getLinks(pageSource):
     extracted = []
     for s in sections:
         extracted.append(re.search(r'<a href="(/\d+[-_\w.]+)" style="color:', s).groups()[0])
-        
+
     return extracted
 
 def getPages(pageSource):
@@ -53,7 +53,7 @@ def getTorrents(url):
     source = source.read().decode("utf8", 'ignore')
     tr = URL_BASE + re.search('<a href="(/download/\d+/\d+/\w+/\d+/[\w_.-]+.torrent)"', source).groups()[0]
     return tr
-    
+
 def download(url):
     if not WINDOZE:
         shutil.os.system('wget -t 10 -T 5 -N -q %s' % url)
@@ -72,7 +72,7 @@ def download(url):
             finalSave = open(fileName, 'wb')
             finalSave.write(torrentFile)
             finalSave.close()
-            
+
             if shutil.os.path.getsize(fileName) == fileSize:
                 passed = True
 #Main
@@ -105,7 +105,7 @@ else:
     print('Logged in as %s' % USERNAME)
 
 
-source = opener.open('http://bakabt.com/browse.php?ordertype=size&order=1&limit=100')    
+source = opener.open('http://bakabt.com/browse.php?ordertype=size&order=1&limit=100')
 source = source.read().decode("utf8", 'ignore')
 
 links = getLinks(source)
@@ -122,14 +122,14 @@ x = open('ExtractsFree.txt', 'w')
 for l in links:
     x.write(URL_BASE + l + '\n')
 x.close()
-print('Extracted %d links that are freeleech.\nNow getting links to .torrent files' % len(links))       
+print('Extracted %d links that are freeleech.\nNow getting links to .torrent files' % len(links))
 
 totalToGet = len(links)
 torrentFiles = []
-for index, link in enumerate(links):   
+for index, link in enumerate(links):
     print('Getting link %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
     torrentFiles.append(getTorrents(link))
-    
+
 print('Got links. Now downloading the files.')
 totalToGet = len(torrentFiles)
 if not shutil.os.path.exists('BakaBT freeleech'):
@@ -138,6 +138,6 @@ shutil.os.chdir('BakaBT freeleech')
 for index, torrent in enumerate(torrentFiles):
     print('Downloading .torrent %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
     download(torrent)
-    
+
 
 print('\nDone.')
