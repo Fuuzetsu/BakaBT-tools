@@ -10,11 +10,9 @@ import http.cookiejar
 import urllib.request
 import urllib.parse
 import urllib.error
+from miscutil import *
 
-USERNAME = ''
-PASSWORD = ''
 URL_BASE = 'http://bakabt.me'
-WINDOZE = False
 
 def getLinks(pageSource):
     sections = []
@@ -60,27 +58,7 @@ def getPages(pageSource):
     pages = re.findall(r'<a href="(/browse.php\?ordertype=size&amp;bonus=1&amp;q=&amp;only=1&amp;order=1&amp;limit=\d+&amp;page=\d+)" class="">\d', pageSource)
     return pages
 
-def getTorrents(url):
-    try:
-        source = opener.open(URL_BASE + url)
-    except:
-        print(URL_BASE + url, 'threw an exception')
 
-    source = source.read().decode("utf8", 'ignore')
-    tr = URL_BASE + re.search('<a href="(/download/\d+/\d+/\w+/\d+/[\w_.-]+.torrent)"', source).groups()[0]
-    return tr
-
-def download(url):
-    if not WINDOZE:
-        shutil.os.system('wget -t 10 -T 5 -N -q %s' % url)
-    else:
-        torrentFileData = urllib.request.urlopen(url).read()
-        f = open(shutil.os.path.split(url)[1], 'wb')
-        f.write(torrentFileData)
-        f.close()
-    logger = open('log.txt', 'a')
-    logger.write(url + '\n')
-    logger.close()
 
 #Main
 if not USERNAME or not PASSWORD:
