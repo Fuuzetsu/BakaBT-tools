@@ -4,12 +4,13 @@
 import sys
 import re
 import shutil
-import socket
+import urllib
 import mechanize
+import os.path
 from HTMLParser import HTMLParser
 
 URL_BASE = 'http://bakabt.me'
-LIMIT = 2
+LIMIT = 1
 
 class Maybe(object):
 
@@ -35,11 +36,7 @@ class Maybe(object):
 
 
 Nothing = Maybe(None, nothing=True)
-
-def Just(v):
-    return Maybe(v)
-
-
+Just = Maybe
 
 def getLinks(pageSource):
     sections = []
@@ -64,45 +61,25 @@ def getLinks(pageSource):
     #sections = ripped out sections with freeleech
     extracted = []
     for s in sections:
-        extracted.append(re.search(r'<a href="(/\d+[-_\w.]+)" style="color:', s).groups()[0])
+        extracted.append(re.search(r'<a href="(/\d+[-_' +
+                                   r'\w.]+)" style="color:', s).groups()[0])
 
     return [ URL_BASE + x for x in extracted ]
 
-def getTorrents(url):
-    while True:
-        try:
-            source = opener.open(URL_BASE + url)
-        except:
-            sys.stdout.write(URL_BASE + url, 'threw an exception')
-        break
-    source = source.read().decode("utf8", 'ignore')
-    tr = URL_BASE + re.search('<a href="(/download/\d+/\d+/\w+/\d+/[\w_.-]+.torrent)"', source).groups()[0]
-    return tr
+def get_torrent_url(url):
+    source = get_page_source(url)
+    f = lambda x: URL_BASE + re.search(
+        r'<a href="(/download/\d+/\d+/'
+        + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
+    return maybeBind(source, f)
 
 def download(url):
-    if not WINDOZE:
-        shutil.os.system('wget -t 10 -T 5 -N -q %s' % url)
-    else:
-        fileName = shutil.os.path.split(url)[1]
-        passed = False
-        while not passed:
-            while True:
-                try:
-                    torrentFile = urllib.request.urlopen(url)
-                    fileSize = int(torrentFile.headers['Content-Length'])
-                    torrentFile = torrentFile.read()
-                except:
-                    continue
-                break
-            finalSave = open(fileName, 'wb')
-            finalSave.write(torrentFile)
-            finalSave.close()
-
-            if shutil.os.path.getsize(fileName) == fileSize:
-                passed = True
+    filename = shutil.os.path.split(url)[1]
+    urllib.urlretrieve (url, os.path.join('downloads', filename))
+    with open(filename, 'wb') as f:
+        f.write(filename)
 
 class BakaParser(HTMLParser):
-
     waiting_for_pages = False
     page_links = []
 
@@ -126,9 +103,6 @@ def search(word):
     response = mechanize.urlopen(request)
     return response.read()
 
-def idt(x):
-    return x
-
 def main():
     if len(sys.argv) != 3:
         sys.stdout.write("usage: python BakaFree.py USERNAME PASSWORD")
@@ -151,9 +125,16 @@ def main():
         sys.exit(3)
 
     all_links = [ y for x in m_links.get_value() for y in x ]
+    urls = [ get_torrent_url(link) for link in all_links ]
+    print urls
 
-    sys.stdout.write(all_links.__str__() + '\n')
-    sys.stdout.write(len(all_links).__str__() + '\n')
+    num_links = len(urls)
+    x = 1
+    for link in urls:
+        sys.stdout.write('Downloading %d/%d\n' % (x, num_links))
+        download(link)
+        x += 1
+
 
 def maybeBind(m, f):
     if m.is_nothing():
@@ -181,7 +162,7 @@ def get_page_source(url):
 
 def get_pages():
     try:
-        page_url = ('%s/browse.php?ordertype=size&order=1&limit=100' % URL_BASE)
+        page_url = ('%s/browse.php?ordertype=size&order=1&limit=10' % URL_BASE)
         request = mechanize.Request(page_url)
         response = mechanize.urlopen(request)
         body = response.read()
@@ -225,21 +206,6 @@ if __name__ == '__main__':
 # source = opener.open('http://bakabt.com/browse.php?ordertype=size&order=1&limit=100')
 # source = source.read().decode("utf8", 'ignore')
 
-# links = getLinks(source)
-# pages = getPages(source)
-# totalToGet = len(pages)
-# for index, page in enumerate(pages):
-#     sys.stdout.write('Still need to get %d pages             ' % (totalToGet - index), end = '\r')
-#     source = opener.open(URL_BASE + page)
-#     source = source.read().decode("utf8", 'ignore')
-#     for link in getLinks(source):
-#         links.append(link)
-
-# x = open('ExtractsFree.txt', 'w')
-# for l in links:
-#     x.write(URL_BASE + l + '\n')
-# x.close()
-# sys.stdout.write('Extracted %d links that are freeleech.\nNow getting links to .torrent files' % len(links))
 
 # totalToGet = len(links)
 # torrentFiles = []
