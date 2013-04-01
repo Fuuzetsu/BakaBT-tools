@@ -12,7 +12,7 @@ import urllib.error
 
 USERNAME = ''
 PASSWORD = ''
-URL_BASE = 'http://bakabt.com'
+URL_BASE = 'http://bakabt.me'
 PAGES = 4
 STARTING = 1
 

@@ -13,7 +13,7 @@ import urllib.error
 
 USERNAME = ''
 PASSWORD = ''
-URL_BASE = 'http://bakabt.com'
+URL_BASE = 'http://bakabt.me'
 WINDOZE = False
 
 def getLinks(pageSource):
