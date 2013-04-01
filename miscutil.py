@@ -157,6 +157,50 @@ def get_pages(limit=None):
     except mechanize.HTTPError:
         return Nothing
 
+def get_bonus_links(pageSource):
+    sections = []
+    while '<td class="category"' in pageSource:
+        cutOff = pageSource.find('<td class="category"')
+        sections.append(pageSource[:cutOff])
+        pageSource = pageSource[cutOff + 20:]
+
+    splitAlts = []
+    for s in sections:
+        if 'Alternative versions:' in s:
+            x = s.find('Alternative versions:')
+            splitAlts.append(s[:x])
+            h = s[x:]
+            while '<tr class="torrent_alt' in h:
+                x = h.find('<tr class="torrent_alt')
+                z = h.find('</tr>')
+                splitAlts.append(s[x:z + 5])
+                h = h[z + 5:]
+        else:
+            splitAlts.append(s)
+
+    bn = '<img src="/images/pixel.gif" class="icon bonusbig" alt="Bonus" title="Bonus"/>'
+    fr = '<span class="success" title="Freeleech">[F]</span>'
+
+    sections = [s for s in splitAlts if bn in s and fr in s]
+
+    #sections = ripped out sections with both, bonus and freeleech
+    extracted = []
+    for s in sections:
+        e = re.search(r'<a href="(/\d+[\w\d-]+.html)" style="color: #[\d\w]+;">', s)
+        #e = re.search(r'<a href="(/\d+[-][-_\w\d.]+.html)"', s)
+        if not e == None:
+            extracted.append(e.groups()[0])
+
+    if extracted == []:
+        print('No appropriate torrents to download.')
+    return extracted
+
+def get_bonus_pages(pageSource):
+    pageSource = pageSource[pageSource.find('<div class="pager">') + len('<div class="pager">'):]
+    pageSource = pageSource[:pageSource.find('</div>')]
+    pages = re.findall(r'<a href="(/browse.php\?ordertype=size&amp;bonus=1&amp;q=&amp;only=1&amp;order=1&amp;limit=\d+&amp;page=\d+)" class="">\d', pageSource)
+    return pages
+
 def search(word):
     request = mechanize.Request('%s/browse.php?q=%s' % (URL_BASE, word))
     response = mechanize.urlopen(request)
