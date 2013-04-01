@@ -3,7 +3,13 @@
 #using wget because it just werks. Change WINDOZE to True if you don't have wget
 #>comments
 
-import re, shutil, socket, http.cookiejar, urllib.request, urllib.parse, urllib.error
+import re
+import shutil
+import socket
+import http.cookiejar
+import urllib.request
+import urllib.parse
+import urllib.error
 
 USERNAME = ''
 PASSWORD = ''

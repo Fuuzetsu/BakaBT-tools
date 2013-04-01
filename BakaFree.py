@@ -2,7 +2,13 @@
 #Possible features: Small torrents only
 #>comments
 
-import re, shutil, socket, http.cookiejar, urllib.request, urllib.parse, urllib.error
+import re
+import shutil
+import socket
+import http.cookiejar
+import urllib.request
+import urllib.parse
+import urllib.error
 
 USERNAME = ''
 PASSWORD = ''
