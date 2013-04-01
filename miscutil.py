@@ -27,6 +27,27 @@ class BakaParser(HTMLParser):
         if tag == 'div' and BakaParser.waiting_for_pages:
             BakaParser.waiting_for_pages = False
 
+class Either(object):
+
+    def __init__(self, val, left=False):
+        self.val = val
+        self.left = left
+
+    def __repr__(self):
+        if self.is_left():
+            return 'Left (%s)' % self.val
+        return 'Right (%s)' % self.val
+
+    def is_left(self):
+        return self.left
+
+    def get_value(self):
+        return self.val
+
+    def bind(self, f):
+        if self.is_left():
+            return self
+        return Right(f(self.get_value()))
 
 class Maybe(object):
 
@@ -53,6 +74,8 @@ class Maybe(object):
 
 Nothing = Maybe(None, nothing=True)
 Just = Maybe
+Left = lambda x: Either(x, left=True)
+Right = Either
 
 
 def maybeBind(m, f):
@@ -157,12 +180,12 @@ def get_pages(limit=None):
     except mechanize.HTTPError:
         return Nothing
 
-def get_bonus_links(pageSource):
+def get_bonus_links(page_source):
     sections = []
-    while '<td class="category"' in pageSource:
-        cutOff = pageSource.find('<td class="category"')
-        sections.append(pageSource[:cutOff])
-        pageSource = pageSource[cutOff + 20:]
+    while '<td class="category"' in page_source:
+        cutOff = page_source.find('<td class="category"')
+        sections.append(page_source[:cutOff])
+        page_source = page_source[cutOff + 20:]
 
     splitAlts = []
     for s in sections:
@@ -195,10 +218,10 @@ def get_bonus_links(pageSource):
         print('No appropriate torrents to download.')
     return extracted
 
-def get_bonus_pages(pageSource):
-    pageSource = pageSource[pageSource.find('<div class="pager">') + len('<div class="pager">'):]
-    pageSource = pageSource[:pageSource.find('</div>')]
-    pages = re.findall(r'<a href="(/browse.php\?ordertype=size&amp;bonus=1&amp;q=&amp;only=1&amp;order=1&amp;limit=\d+&amp;page=\d+)" class="">\d', pageSource)
+def get_bonus_pages(page_source):
+    page_source = page_source[page_source.find('<div class="pager">') + len('<div class="pager">'):]
+    page_source = page_source[:page_source.find('</div>')]
+    pages = re.findall(r'<a href="(/browse.php\?ordertype=size&amp;bonus=1&amp;q=&amp;only=1&amp;order=1&amp;limit=\d+&amp;page=\d+)" class="">\d', page_source)
     return pages
 
 def search(word):
