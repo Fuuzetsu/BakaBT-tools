@@ -2,16 +2,34 @@
 #Possible features: Small torrents only
 
 import sys
+import argparse
 from miscutil import *
 
 URL_BASE = 'http://bakabt.me'
 
-def main():
-    if len(sys.argv) != 3:
-        sys.stdout.write("usage: python BakaFree.py USERNAME PASSWORD")
-        sys.exit(2)
+def get_arg_parser():
+    parser = argparse.ArgumentParser(description='Small tool to extend '
+                                     + 'search capabilities of BakaBT '
+                                     + 'anime tracker.')
+    parser.add_argument('-u', '--username', nargs=1, required=True,
+                        help='Site username.')
+    parser.add_argument('-p', '--password', nargs=1, required=True,
+                        help='Site password')
+    parser.add_argument('-b', '--bonus', action='store_true', default=False,
+                       help='Only get bonus torrents')
+    parser.add_argument('-n', '--no-freeleech',
+                        action='store_false', default=True,
+                        help='Do not restrict results to freeleech torrents')
+    parser.add_argument('-d', '--directory', nargs=1, default='',
+                        help='Download directory')
 
-    logged_in = login(sys.argv[1], sys.argv[2])
+    return parser
+
+
+def main():
+    conf = get_arg_parser().parse_args()
+
+    logged_in = login(conf.username, conf.password)
 
     if logged_in.is_nothing():
         sys.stdout.write('Failed to reach the login page.\n')
