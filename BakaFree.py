@@ -1,18 +1,12 @@
 #Uses your cookies to search BakaBT for torrents that are freeleech
 #Possible features: Small torrents only
-#>comments
 
 import sys
 import re
 import shutil
 import socket
-import http.cookiejar
-import urllib.request
-import urllib.parse
-import urllib.error
+import mechanize
 
-USERNAME = ''
-PASSWORD = ''
 URL_BASE = 'http://bakabt.me'
 PAGES = 4
 STARTING = 1
@@ -82,69 +76,84 @@ def download(url):
 
             if shutil.os.path.getsize(fileName) == fileSize:
                 passed = True
-#Main
-try:
-    details = urllib.parse.urlencode({'username': USERNAME, 'password': PASSWORD})
-    details = details.encode('ascii')
-    cj = http.cookiejar.CookieJar()
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
-    opener.open(URL_BASE + '/login.php', details)
-    ResponseData = opener.open(URL_BASE)
-    cookies = ResponseData.info()['set-cookie']
-    ResponseData = ResponseData.read().decode("utf8", 'ignore')
-    ResponseFail = 'False'
-except urllib.error.HTTPError as e:
-    ResponseData = e.read().decode("utf8", 'ignore')
-    ResponseFail = 'False'
-except urllib.error.URLError: ResponseFail = 'True'
-except socket.error: ResponseFail = 'True'
-except socket.timeout: ResponseFail = 'True'
-except UnicodeEncodeError: sys.stdout.write("[x]  Encoding Error"); ResponseFail = 'True'
-
-if ResponseFail == 'True':
-    sys.stdout.write('Failed to connect. Try again.')
-    shutil.os._exit(1)
-
-if not USERNAME in ResponseData:
-    sys.stdout.write('Failed to log in.')
-    shutil.os._exit(1)
-else:
-    sys.stdout.write('Logged in as %s' % USERNAME)
 
 
-source = opener.open('http://bakabt.com/browse.php?ordertype=size&order=1&limit=100')
-source = source.read().decode("utf8", 'ignore')
-
-links = getLinks(source)
-pages = getPages(source)
-totalToGet = len(pages)
-for index, page in enumerate(pages):
-    sys.stdout.write('Still need to get %d pages             ' % (totalToGet - index), end = '\r')
-    source = opener.open(URL_BASE + page)
-    source = source.read().decode("utf8", 'ignore')
-    for link in getLinks(source):
-        links.append(link)
-
-x = open('ExtractsFree.txt', 'w')
-for l in links:
-    x.write(URL_BASE + l + '\n')
-x.close()
-sys.stdout.write('Extracted %d links that are freeleech.\nNow getting links to .torrent files' % len(links))
-
-totalToGet = len(links)
-torrentFiles = []
-for index, link in enumerate(links):
-    sys.stdout.write('Getting link %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
-    torrentFiles.append(getTorrents(link))
-
-sys.stdout.write('Got links. Now downloading the files.')
-totalToGet = len(torrentFiles)
-if not shutil.os.path.exists('BakaBT freeleech'):
-    shutil.os.mkdir('BakaBT freeleech')
-shutil.os.chdir('BakaBT freeleech')
-for index, torrent in enumerate(torrentFiles):
-    sys.stdout.write('Downloading .torrent %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
-    download(torrent)
+def search(word):
+    request = mechanize.Request('%s/browse.php?q=%s' % (URL_BASE, word))
+    response = mechanize.urlopen(request)
+    return response.read()
 
 
-sys.stdout.write('\nDone.')
+
+def main():
+    if len(sys.argv) != 3:
+        sys.stdout.write("usage: python BakaFree.py USERNAME PASSWORD")
+        sys.exit(2)
+
+    logged_in = login(sys.argv[1], sys.argv[2])
+
+    if logged_in:
+        sys.stdout.write('Successfully logged in as %s\n' % sys.argv[1] )
+    else:
+        sys.stdout.write('Failed to log in.\n')
+        sys.exit(3)
+
+
+def login(username, password):
+    request = mechanize.Request('%s/login.php' % URL_BASE)
+    response = mechanize.urlopen(request)
+    forms = mechanize.ParseResponse(response)
+    response.close()
+
+    form = forms[2]
+    form['username'] = username
+    form['password'] = password
+    login_request = form.click()
+    try:
+        login_response = mechanize.urlopen(login_request)
+    except mechanize.HTTPError, login_response:
+        sys.stdout.write('HTTPError when logging in...\n')
+
+    return login_response.geturl() == ('%s/index.php' % URL_BASE)
+
+if __name__ == '__main__':
+    main()
+
+
+
+# source = opener.open('http://bakabt.com/browse.php?ordertype=size&order=1&limit=100')
+# source = source.read().decode("utf8", 'ignore')
+
+# links = getLinks(source)
+# pages = getPages(source)
+# totalToGet = len(pages)
+# for index, page in enumerate(pages):
+#     sys.stdout.write('Still need to get %d pages             ' % (totalToGet - index), end = '\r')
+#     source = opener.open(URL_BASE + page)
+#     source = source.read().decode("utf8", 'ignore')
+#     for link in getLinks(source):
+#         links.append(link)
+
+# x = open('ExtractsFree.txt', 'w')
+# for l in links:
+#     x.write(URL_BASE + l + '\n')
+# x.close()
+# sys.stdout.write('Extracted %d links that are freeleech.\nNow getting links to .torrent files' % len(links))
+
+# totalToGet = len(links)
+# torrentFiles = []
+# for index, link in enumerate(links):
+#     sys.stdout.write('Getting link %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
+#     torrentFiles.append(getTorrents(link))
+
+# sys.stdout.write('Got links. Now downloading the files.')
+# totalToGet = len(torrentFiles)
+# if not shutil.os.path.exists('BakaBT freeleech'):
+#     shutil.os.mkdir('BakaBT freeleech')
+# shutil.os.chdir('BakaBT freeleech')
+# for index, torrent in enumerate(torrentFiles):
+#     sys.stdout.write('Downloading .torrent %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
+#     download(torrent)
+
+
+# sys.stdout.write('\nDone.')
