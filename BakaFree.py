@@ -2,6 +2,7 @@
 #Possible features: Small torrents only
 #>comments
 
+import sys
 import re
 import shutil
 import socket
@@ -54,7 +55,7 @@ def getTorrents(url):
         try:
             source = opener.open(URL_BASE + url)
         except:
-            print(URL_BASE + url, 'threw an exception')
+            sys.stdout.write(URL_BASE + url, 'threw an exception')
         break
     source = source.read().decode("utf8", 'ignore')
     tr = URL_BASE + re.search('<a href="(/download/\d+/\d+/\w+/\d+/[\w_.-]+.torrent)"', source).groups()[0]
@@ -98,17 +99,17 @@ except urllib.error.HTTPError as e:
 except urllib.error.URLError: ResponseFail = 'True'
 except socket.error: ResponseFail = 'True'
 except socket.timeout: ResponseFail = 'True'
-except UnicodeEncodeError: print("[x]  Encoding Error"); ResponseFail = 'True'
+except UnicodeEncodeError: sys.stdout.write("[x]  Encoding Error"); ResponseFail = 'True'
 
 if ResponseFail == 'True':
-    print('Failed to connect. Try again.')
+    sys.stdout.write('Failed to connect. Try again.')
     shutil.os._exit(1)
 
 if not USERNAME in ResponseData:
-    print('Failed to log in.')
+    sys.stdout.write('Failed to log in.')
     shutil.os._exit(1)
 else:
-    print('Logged in as %s' % USERNAME)
+    sys.stdout.write('Logged in as %s' % USERNAME)
 
 
 source = opener.open('http://bakabt.com/browse.php?ordertype=size&order=1&limit=100')
@@ -118,7 +119,7 @@ links = getLinks(source)
 pages = getPages(source)
 totalToGet = len(pages)
 for index, page in enumerate(pages):
-    print('Still need to get %d pages             ' % (totalToGet - index), end = '\r')
+    sys.stdout.write('Still need to get %d pages             ' % (totalToGet - index), end = '\r')
     source = opener.open(URL_BASE + page)
     source = source.read().decode("utf8", 'ignore')
     for link in getLinks(source):
@@ -128,22 +129,22 @@ x = open('ExtractsFree.txt', 'w')
 for l in links:
     x.write(URL_BASE + l + '\n')
 x.close()
-print('Extracted %d links that are freeleech.\nNow getting links to .torrent files' % len(links))
+sys.stdout.write('Extracted %d links that are freeleech.\nNow getting links to .torrent files' % len(links))
 
 totalToGet = len(links)
 torrentFiles = []
 for index, link in enumerate(links):
-    print('Getting link %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
+    sys.stdout.write('Getting link %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
     torrentFiles.append(getTorrents(link))
 
-print('Got links. Now downloading the files.')
+sys.stdout.write('Got links. Now downloading the files.')
 totalToGet = len(torrentFiles)
 if not shutil.os.path.exists('BakaBT freeleech'):
     shutil.os.mkdir('BakaBT freeleech')
 shutil.os.chdir('BakaBT freeleech')
 for index, torrent in enumerate(torrentFiles):
-    print('Downloading .torrent %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
+    sys.stdout.write('Downloading .torrent %d out of %d.        ' % (index + 1, totalToGet), end = '\r')
     download(torrent)
 
 
-print('\nDone.')
+sys.stdout.write('\nDone.')
