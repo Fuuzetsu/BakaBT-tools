@@ -1,5 +1,4 @@
 import re
-import sys
 import shutil
 import urllib
 import mechanize
@@ -47,7 +46,15 @@ class Either(object):
     def bind(self, f):
         if self.is_left():
             return self
-        return Right(f(self.get_value()))
+        return f(self.get_value())
+
+    def __rshift__(self, f):
+        return self.bind(lambda _: f)
+
+    @staticmethod
+    def mreturn(v):
+        return Right(v)
+
 
 class Maybe(object):
 
@@ -58,7 +65,7 @@ class Maybe(object):
     def __repr__(self):
         if self.is_nothing():
             return 'Nothing'
-        return 'Just %s' % self.val
+        return 'Just (%s)' % self.val
 
     def is_nothing(self):
         return self.nothing
@@ -67,6 +74,18 @@ class Maybe(object):
         if self.nothing:
             raise Maybe.NothingError
         return self.val
+
+    def __rshift__(self, f):
+        return self.bind(lambda _: f)
+
+    def bind(self, f):
+        if self.is_nothing():
+            return Nothing
+        return f(self.get_value())
+
+    @staticmethod
+    def mreturn(v):
+        return Just(v)
 
     class NothingError(Exception):
         pass
@@ -77,15 +96,31 @@ Just = Maybe
 Left = lambda x: Either(x, left=True)
 Right = Either
 
+def comp(f, g):
+    return lambda x: f(g(x))
 
-def maybeBind(m, f):
-    if m.is_nothing():
-        return Nothing
-    return f(m.get_value())
+def concat(xs):
+    return [ y for x in xs for y in x ]
 
-def mKlesliComp(f, g):
-    return lambda x: maybeBind(g(x), f)
+def klesli_comp(f, g):
+    return lambda x: g(x).bind(f)
 
+def liftM(f, m):
+    return m.bind(lambda x: type(m).mreturn(f(x)))
+
+def sequenceE(ms):
+    p = Right([])
+    for m in ms:
+        if m.is_left():
+            return m
+        p = p.bind(lambda x: type(p).mreturn(x + [m.get_value()]))
+    return p
+
+def mapE(f, ms):
+    return sequenceE( [ f(m) for m in ms ])
+
+def fmapM(f, m):
+    return m.bind(lambda x: map(f, x))
 
 # (a -> b) -> Maybe [a] -> Maybe [b]
 def mapMaybe(f, m):
@@ -93,14 +128,14 @@ def mapMaybe(f, m):
         return Nothing
     return Just([ f(x) for x in m.get_value() ])
 
-def getLinks(pageSource):
+def get_links(page_source):
     sections = []
-    while '<td class="category"' in pageSource:
-        cutOff = pageSource.find('<td class="category"')
-        sections.append(pageSource[:cutOff])
-        pageSource = pageSource[cutOff + 24:]
+    while '<td class="category"' in page_source:
+        cutOff = page_source.find('<td class="category"')
+        sections.append(page_source[:cutOff])
+        page_source = page_source[cutOff + 24:]
 
-    sections.append(pageSource)
+    sections.append(page_source)
 
     splitAlts = []
     for s in sections:
@@ -127,13 +162,21 @@ def get_torrent_url(url):
     f = lambda x: URL_BASE + re.search(
         r'<a href="(/download/\d+/\d+/'
         + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
-    return maybeBind(source, f)
+    return liftM(f, source)
 
 def download(url):
-    filename = shutil.os.path.split(url)[1]
-    urllib.urlretrieve (url, os.path.join('downloads', filename))
-    with open(filename, 'wb') as f:
-        f.write(filename)
+    try:
+        filename = os.path.join('downloads', shutil.os.path.split(url)[1])
+        urllib.urlretrieve(url, filename)
+        with open(filename, 'wb') as f:
+            f.write(filename)
+    except urllib.ContentTooShortError:
+        return Left('ContentTooShortError when downloading %s to %s'
+                    % (url, filename))
+    except IOError:
+        return Left('IOError when downloading %s to %s' % (url, filename))
+
+    return Right('%s downloaded to %s' % (url, filename))
 
 def login(username, password):
     request = mechanize.Request('%s/login.php' % URL_BASE)
@@ -141,8 +184,7 @@ def login(username, password):
     forms = mechanize.ParseResponse(response)
     response.close()
     if len(forms) < 3:
-        sys.stderr.write('Failed to reach the login page.\n')
-        sys.exit(1)
+        return Left('Failed to reach the login page.')
 
     form = forms[2]
     form['username'] = username
@@ -151,18 +193,22 @@ def login(username, password):
     try:
         login_response = mechanize.urlopen(login_request)
     except mechanize.HTTPError, login_response:
-        sys.stderr.write('HTTPError when logging in...\n')
-        return Nothing
+        return Left('HTTPError when logging in...')
 
-    return Just(login_response.geturl() == ('%s/index.php' % URL_BASE))
+    logged_in = login_response.geturl() == ('%s/index.php' % URL_BASE)
+
+    if not logged_in:
+        return Left('Failed to log in with these credentials')
+
+    return Right('Logged in as %s' % username)
 
 def get_page_source(url):
     try:
-        return Just(mechanize.urlopen(url).read())
+        return Right(mechanize.urlopen(url).read())
     except mechanize.HTTPError:
-        sys.stderr.write('HTTPError when fetching %s\n' % url)
-        return Nothing
-
+        Left('HTTPError when fetching %s' % url)
+    except ValueError:
+        Left('Could not fetch invalid url: %s' % url)
 
 def get_pages(limit=None):
     try:
@@ -176,9 +222,9 @@ def get_pages(limit=None):
         parser.feed(body)
         pages = int(BakaParser.page_links[-2].split('=')[-1]) + 1
         pages = limit if limit != None and limit < pages else pages
-        return Just([ '%s&page=%d' % (page_url, p) for p in xrange(pages) ])
-    except mechanize.HTTPError:
-        return Nothing
+        return Right([ '%s&page=%d' % (page_url, p) for p in xrange(pages) ])
+    except IndexError, mechanize.HTTPError:
+        return Left('Failed to fetch number of pages')
 
 def get_bonus_links(page_source):
     sections = []
