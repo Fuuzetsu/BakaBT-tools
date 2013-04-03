@@ -1,3 +1,4 @@
 *.pyc
 flycheck*
 downloads/
+*.torrent
