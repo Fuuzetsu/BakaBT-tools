@@ -164,19 +164,27 @@ def get_torrent_url(url):
         + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
     return liftM(f, source)
 
-def download(url):
-    try:
-        filename = os.path.join('downloads', shutil.os.path.split(url)[1])
-        urllib.urlretrieve(url, filename)
-        with open(filename, 'wb') as f:
-            f.write(filename)
-    except urllib.ContentTooShortError:
-        return Left('ContentTooShortError when downloading %s to %s'
-                    % (url, filename))
-    except IOError:
-        return Left('IOError when downloading %s to %s' % (url, filename))
+def download(conf):
+    def inner_download(url):
+        try:
+            filename = os.path.join(conf.directory[0],
+                                    shutil.os.path.split(url)[1])
 
-    return Right('%s downloaded to %s' % (url, filename))
+            if not os.path.exists(conf.directory[0]):
+                os.makedirs(conf.directory[0])
+
+            urllib.urlretrieve(url, filename)
+            with open(filename, 'wb') as f:
+                f.write(filename)
+        except urllib.ContentTooShortError:
+            return Left('ContentTooShortError when downloading %s to %s'
+                        % (url, filename))
+        except IOError:
+            return Left('IOError when downloading %s to %s' % (url, filename))
+
+        return Right('%s downloaded to %s' % (url, filename))
+
+    return inner_download
 
 def login(username, password):
     request = mechanize.Request('%s/login.php' % URL_BASE)

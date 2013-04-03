@@ -20,8 +20,8 @@ def get_arg_parser():
     parser.add_argument('-n', '--no-freeleech',
                         action='store_false', default=True,
                         help='Do not restrict results to freeleech torrents')
-    parser.add_argument('-d', '--directory', nargs=1, default='',
-                        help='Download directory')
+    parser.add_argument('-d', '--directory', nargs=1, default='downloads',
+                        help='Download directory (default=downloads)')
 
     return parser
 
@@ -33,7 +33,7 @@ def main():
                                       >> get_pages(limit=2)).bind(
         lambda x: mapE(
             lambda y: liftM(get_links, get_page_source(y)), x))).bind(
-                lambda z: map(klesli_comp(download, get_torrent_url), z))
+                lambda z: map(klesli_comp(download(conf), get_torrent_url), z))
 
     sys.stdout.write('%s\n' % status)
 
