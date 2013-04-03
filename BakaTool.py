@@ -5,8 +5,6 @@ import sys
 import argparse
 from miscutil import *
 
-URL_BASE = 'http://bakabt.me'
-
 def get_arg_parser():
     parser = argparse.ArgumentParser(description='Small tool to extend '
                                      + 'search capabilities of BakaBT '
@@ -22,6 +20,14 @@ def get_arg_parser():
                         help='Do not restrict results to freeleech torrents')
     parser.add_argument('-d', '--directory', nargs=1, default='downloads',
                         help='Download directory (default=downloads)')
+    parser.add_argument('-l', '--limit', nargs=1, default=5,
+                        help='Maximum number of pages (default 5)')
+    parser.add_argument('-a', '--amount', nargs=1, default=20,
+                        help='Torrents per page, max 100 (default 20)')
+    parser.add_argument('-s', '--smallest', action='store_true', default=False,
+                        help='Sort torrents by their size (default False)')
+    parser.add_argument('-w', '--website', nargs=1, default='http://bakabt.me',
+                        help='Site to use (default http://bakabt.me)')
 
     return parser
 
@@ -29,11 +35,11 @@ def get_arg_parser():
 def main():
     conf = get_arg_parser().parse_args()
 
-    status = liftM(concat, (login(conf.username[0], conf.password[0])
-                                      >> get_pages(limit=2)).bind(
+    status = liftM(concat, (login(conf) >> get_pages(conf)).bind(
         lambda x: mapE(
             lambda y: liftM(get_links, get_page_source(y)), x))).bind(
-                lambda z: map(klesli_comp(download(conf), get_torrent_url), z))
+                lambda z: map(klesli_comp(
+                    download, get_torrent_url(conf)), z))
 
     sys.stdout.write('%s\n' % status)
 

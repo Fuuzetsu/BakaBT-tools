@@ -5,7 +5,6 @@ import mechanize
 import os.path
 from HTMLParser import HTMLParser
 
-URL_BASE = 'http://bakabt.me'
 
 class BakaParser(HTMLParser):
     waiting_for_pages = False
@@ -128,111 +127,36 @@ def mapMaybe(f, m):
         return Nothing
     return Just([ f(x) for x in m.get_value() ])
 
-def get_links(page_source):
-    sections = []
-    while '<td class="category"' in page_source:
-        cutOff = page_source.find('<td class="category"')
-        sections.append(page_source[:cutOff])
-        page_source = page_source[cutOff + 24:]
+def get_links(conf):
+    def inner_links(page_source):
+        sections = []
+        while '<td class="category"' in page_source:
+            cutOff = page_source.find('<td class="category"')
+            sections.append(page_source[:cutOff])
+            page_source = page_source[cutOff + 24:]
 
-    sections.append(page_source)
+        sections.append(page_source)
 
-    splitAlts = []
-    for s in sections:
-        if 'Alternative versions:' in s:
-            x = s.find('Alternative versions:')
-            splitAlts.append(s[:x])
-            splitAlts.append(s[x:])
-        else:
-            splitAlts.append(s)
-            fr = 'title="Freeleech">[F]</span>'
-            sections = [s for s in sections if fr in s]
+        splitAlts = []
+        for s in sections:
+            if 'Alternative versions:' in s:
+                x = s.find('Alternative versions:')
+                splitAlts.append(s[:x])
+                splitAlts.append(s[x:])
+            else:
+                splitAlts.append(s)
+                fr = 'title="Freeleech">[F]</span>'
+                sections = [s for s in sections if fr in s]
 
-    #sections = ripped out sections with freeleech
-    extracted = []
-    for s in sections:
-        extracted.append(re.search(r'<a href="(/\d+[-_' +
-                                   r'\w.]+)" style="color:', s).groups()[0])
+        extracted = []
+        for s in sections:
+            extracted.append(re.search(r'<a href="(/\d+[-_' +
+                                       r'\w.]+)" style="color:', s).groups()[0])
 
-    return [ URL_BASE + x for x in extracted ]
+        return [ conf.website[0] + x for x in extracted ]
 
+    return inner_links
 
-def get_torrent_url(url):
-    source = get_page_source(url)
-    f = lambda x: URL_BASE + re.search(
-        r'<a href="(/download/\d+/\d+/'
-        + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
-    return liftM(f, source)
-
-def download(conf):
-    def inner_download(url):
-        try:
-            filename = os.path.join(conf.directory[0],
-                                    shutil.os.path.split(url)[1])
-
-            if not os.path.exists(conf.directory[0]):
-                os.makedirs(conf.directory[0])
-
-            urllib.urlretrieve(url, filename)
-            with open(filename, 'wb') as f:
-                f.write(filename)
-        except urllib.ContentTooShortError:
-            return Left('ContentTooShortError when downloading %s to %s'
-                        % (url, filename))
-        except IOError:
-            return Left('IOError when downloading %s to %s' % (url, filename))
-
-        return Right('%s downloaded to %s' % (url, filename))
-
-    return inner_download
-
-def login(username, password):
-    request = mechanize.Request('%s/login.php' % URL_BASE)
-    response = mechanize.urlopen(request)
-    forms = mechanize.ParseResponse(response)
-    response.close()
-    if len(forms) < 3:
-        return Left('Failed to reach the login page.')
-
-    form = forms[2]
-    form['username'] = username
-    form['password'] = password
-    login_request = form.click()
-    try:
-        login_response = mechanize.urlopen(login_request)
-    except mechanize.HTTPError, login_response:
-        return Left('HTTPError when logging in...')
-
-    logged_in = login_response.geturl() == ('%s/index.php' % URL_BASE)
-
-    if not logged_in:
-        return Left('Failed to log in with these credentials')
-
-    return Right('Logged in as %s' % username)
-
-def get_page_source(url):
-    try:
-        return Right(mechanize.urlopen(url).read())
-    except mechanize.HTTPError:
-        Left('HTTPError when fetching %s' % url)
-    except ValueError:
-        Left('Could not fetch invalid url: %s' % url)
-
-def get_pages(limit=None):
-    try:
-        page_url = ('%s/browse.php?ordertype=size&order=1&limit=10' % URL_BASE)
-        request = mechanize.Request(page_url)
-        response = mechanize.urlopen(request)
-        body = response.read()
-        response.close()
-
-        parser = BakaParser()
-        parser.feed(body)
-        pages = int(BakaParser.page_links[-2].split('=')[-1]) + 1
-        pages = limit if limit != None and limit < pages else pages
-        return Right([ '%s&page=%d' % (page_url, p) for p in xrange(pages) ])
-    except IndexError, mechanize.HTTPError:
-        return Left('Failed to fetch number of pages')
 
 def get_bonus_links(page_source):
     sections = []
@@ -272,13 +196,98 @@ def get_bonus_links(page_source):
         print('No appropriate torrents to download.')
     return extracted
 
-def get_bonus_pages(page_source):
-    page_source = page_source[page_source.find('<div class="pager">') + len('<div class="pager">'):]
-    page_source = page_source[:page_source.find('</div>')]
-    pages = re.findall(r'<a href="(/browse.php\?ordertype=size&amp;bonus=1&amp;q=&amp;only=1&amp;order=1&amp;limit=\d+&amp;page=\d+)" class="">\d', page_source)
-    return pages
 
-def search(word):
-    request = mechanize.Request('%s/browse.php?q=%s' % (URL_BASE, word))
+
+def get_torrent_url(conf):
+    def inner(url):
+        source = get_page_source(url)
+        f = lambda x: conf.website[0] + re.search(
+            r'<a href="(/download/\d+/\d+/'
+            + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
+        return liftM(f, source)
+    return inner
+
+def download(conf):
+    def inner_download(url):
+        try:
+            filename = os.path.join(conf.directory[0],
+                                    shutil.os.path.split(url)[1])
+
+            if not os.path.exists(conf.directory[0]):
+                os.makedirs(conf.directory[0])
+
+            urllib.urlretrieve(url, filename)
+            with open(filename, 'wb') as f:
+                f.write(filename)
+        except urllib.ContentTooShortError:
+            return Left('ContentTooShortError when downloading %s to %s'
+                        % (url, filename))
+        except IOError:
+            return Left('IOError when downloading %s to %s' % (url, filename))
+
+        return Right('%s downloaded to %s' % (url, filename))
+
+    return inner_download
+
+def login(conf):
+    username = conf.username[0]
+    password = conf.password[0]
+    request = mechanize.Request('%s/login.php' % conf.website[0])
     response = mechanize.urlopen(request)
-    return response.read()
+    forms = mechanize.ParseResponse(response)
+    response.close()
+    if len(forms) < 3:
+        return Left('Failed to reach the login page.')
+
+    form = forms[2]
+    form['username'] = username
+    form['password'] = password
+    login_request = form.click()
+    try:
+        login_response = mechanize.urlopen(login_request)
+    except mechanize.HTTPError, login_response:
+        return Left('HTTPError when logging in...')
+
+    logged_in = login_response.geturl() == ('%s/index.php' % conf.website[0])
+
+    if not logged_in:
+        return Left('Failed to log in with these credentials')
+
+    return Right('Logged in as %s' % username)
+
+def get_page_source(url):
+    try:
+        return Right(mechanize.urlopen(url).read())
+    except mechanize.HTTPError:
+        Left('HTTPError when fetching %s' % url)
+    except ValueError:
+        Left('Could not fetch invalid url: %s' % url)
+
+def get_pages(conf):
+    try:
+        order = '&ordertype=size&order=1' if conf.smallest else ''
+        bonus = '&only=1&bonus=1'
+
+        amount = conf.amount[0]
+        if amount < 1:
+            amount = 1
+        elif amount > 100:
+            amount = 100
+
+        page_url = ('%s/browse.php?limit=%s%s%s' % (conf.website[0],
+                                                    amount, order, bonus))
+
+        request = mechanize.Request(page_url)
+        response = mechanize.urlopen(request)
+        body = response.read()
+        response.close()
+
+        parser = BakaParser()
+        parser.feed(body)
+        pages = int(BakaParser.page_links[-2].split('=')[-1]) + 1
+        pages = conf.limit[0] if conf.limit[0] > 0 else pages
+        return Right([ '%s&page=%d' % (page_url, p) for p in xrange(pages) ])
+    except IndexError:
+        return Left('Failed to fetch number of pages')
+    except mechanize.HTTPError as me:
+        return Left('Failed to reach basic search results: %s' % me)
