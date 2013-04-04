@@ -32,6 +32,8 @@ def get_arg_parser():
                         help='Timeout for any URL request (default=15.0s)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Print messages during the program')
+    parser.add_argument('-m', '--maxsize', default=100, type=float,
+                        help='Maximum torrent size in MB (default=100)')
 
     return parser
 
