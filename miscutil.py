@@ -4,6 +4,7 @@ import urllib
 import mechanize
 import os.path
 from HTMLParser import HTMLParser
+from urllib2 import URLError
 
 
 class BakaParser(HTMLParser):
@@ -254,6 +255,8 @@ def login(conf):
 
     except mechanize.HTTPError as resp:
         return Left('HTTPError when logging in: %s' % resp)
+    except URLError as ue:
+        return Left('URLError: %s' % ue)
     except ValueError as ve:
         return Left('URL value error: %s' % ve)
 
@@ -295,3 +298,5 @@ def get_pages(conf):
         return Left('Failed to fetch number of pages')
     except mechanize.HTTPError as me:
         return Left('Failed to reach basic search results: %s' % me)
+    except URLError as ue:
+        return Left('URLError: %s' % ue)
