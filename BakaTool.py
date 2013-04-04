@@ -37,9 +37,9 @@ def main():
 
     status = liftM(concat, (login(conf) >> get_pages(conf)).bind(
         lambda x: mapE(
-            lambda y: liftM(get_links, get_page_source(y)), x))).bind(
+            lambda y: liftM(get_links(conf), get_page_source(y)), x))).bind(
                 lambda z: map(klesli_comp(
-                    download, get_torrent_url(conf)), z))
+                    download(conf), get_torrent_url(conf)), z))
 
     sys.stdout.write('%s\n' % status)
 

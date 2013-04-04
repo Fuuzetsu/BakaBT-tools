@@ -153,7 +153,7 @@ def get_links(conf):
             extracted.append(re.search(r'<a href="(/\d+[-_' +
                                        r'\w.]+)" style="color:', s).groups()[0])
 
-        return [ conf.website[0] + x for x in extracted ]
+        return [ conf.website + x for x in extracted ]
 
     return inner_links
 
@@ -201,7 +201,7 @@ def get_bonus_links(page_source):
 def get_torrent_url(conf):
     def inner(url):
         source = get_page_source(url)
-        f = lambda x: conf.website[0] + re.search(
+        f = lambda x: conf.website + re.search(
             r'<a href="(/download/\d+/\d+/'
             + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
         return liftM(f, source)
@@ -230,28 +230,32 @@ def download(conf):
     return inner_download
 
 def login(conf):
-    username = conf.username[0]
-    password = conf.password[0]
-    request = mechanize.Request('%s/login.php' % conf.website[0])
-    response = mechanize.urlopen(request)
-    forms = mechanize.ParseResponse(response)
-    response.close()
-    if len(forms) < 3:
-        return Left('Failed to reach the login page.')
-
-    form = forms[2]
-    form['username'] = username
-    form['password'] = password
-    login_request = form.click()
     try:
+        username = conf.username[0]
+        password = conf.password[0]
+        request = mechanize.Request('%s/login.php' % conf.website)
+        response = mechanize.urlopen(request)
+        forms = mechanize.ParseResponse(response)
+        response.close()
+
+        if len(forms) < 3:
+            return Left('Failed to reach the login page.')
+
+        form = forms[2]
+        form['username'] = username
+        form['password'] = password
+        login_request = form.click()
+
         login_response = mechanize.urlopen(login_request)
-    except mechanize.HTTPError, login_response:
-        return Left('HTTPError when logging in...')
+        logged_in = login_response.geturl() == ('%s/index.php' % conf.website)
 
-    logged_in = login_response.geturl() == ('%s/index.php' % conf.website[0])
+        if not logged_in:
+            return Left('Failed to log in with these credentials')
 
-    if not logged_in:
-        return Left('Failed to log in with these credentials')
+    except mechanize.HTTPError as resp:
+        return Left('HTTPError when logging in: %s' % resp)
+    except ValueError as ve:
+        return Left('URL value error: %s' % ve)
 
     return Right('Logged in as %s' % username)
 
@@ -259,22 +263,22 @@ def get_page_source(url):
     try:
         return Right(mechanize.urlopen(url).read())
     except mechanize.HTTPError:
-        Left('HTTPError when fetching %s' % url)
-    except ValueError:
-        Left('Could not fetch invalid url: %s' % url)
+        return Left('HTTPError when fetching %s' % url)
+    except ValueError as ve:
+        return Left('URL value error: %s' % ve)
 
 def get_pages(conf):
     try:
         order = '&ordertype=size&order=1' if conf.smallest else ''
         bonus = '&only=1&bonus=1'
 
-        amount = conf.amount[0]
+        amount = conf.amount
         if amount < 1:
             amount = 1
         elif amount > 100:
             amount = 100
 
-        page_url = ('%s/browse.php?limit=%s%s%s' % (conf.website[0],
+        page_url = ('%s/browse.php?limit=%s%s%s' % (conf.website,
                                                     amount, order, bonus))
 
         request = mechanize.Request(page_url)
@@ -285,7 +289,7 @@ def get_pages(conf):
         parser = BakaParser()
         parser.feed(body)
         pages = int(BakaParser.page_links[-2].split('=')[-1]) + 1
-        pages = conf.limit[0] if conf.limit[0] > 0 else pages
+        pages = conf.limit if conf.limit > 0 else pages
         return Right([ '%s&page=%d' % (page_url, p) for p in xrange(pages) ])
     except IndexError:
         return Left('Failed to fetch number of pages')
