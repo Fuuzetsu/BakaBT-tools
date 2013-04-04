@@ -28,7 +28,7 @@ def get_arg_parser():
                         help='Sort torrents by their size (default=False)')
     parser.add_argument('-w', '--website', default='http://bakabt.me',
                         help='Site to use (default=http://bakabt.me)')
-    parser.add_argument('-t', '--timeout', default=[15.0], type=float,
+    parser.add_argument('-t', '--timeout', default=15.0, type=float,
                         help='Timeout for any URL request (default=15.0s)')
 
     return parser
