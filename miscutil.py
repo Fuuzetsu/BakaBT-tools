@@ -180,8 +180,7 @@ def download(conf):
                 os.makedirs(conf.directory)
 
             urllib.urlretrieve(url, filename)
-            with open(filename, 'wb') as f:
-                f.write(filename)
+
         except urllib.ContentTooShortError:
             return Left('ContentTooShortError when downloading %s to %s'
                         % (url, filename))
