@@ -146,14 +146,15 @@ def get_links(conf):
             else:
                 splitAlts.append(s)
                 fr = 'title="Freeleech">[F]</span>'
-                sections = [s for s in sections if fr in s]
+                sections = [s for s in sections
+                            if fr in s and not conf.no_freeleech]
 
         extracted = []
         for s in sections:
             extracted.append(re.search(r'<a href="(/\d+[-_' +
                                        r'\w.]+)" style="color:', s).groups()[0])
 
-        return [ conf.website + x for x in extracted ]
+        return [ conf.website[0] + x for x in extracted ]
 
     return inner_links
 
@@ -201,7 +202,7 @@ def get_bonus_links(page_source):
 def get_torrent_url(conf):
     def inner(url):
         source = get_page_source(url)
-        f = lambda x: conf.website + re.search(
+        f = lambda x: conf.website[0] + re.search(
             r'<a href="(/download/\d+/\d+/'
             + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
         return liftM(f, source)
@@ -235,7 +236,7 @@ def login(conf):
     try:
         username = conf.username[0]
         password = conf.password[0]
-        request = mechanize.Request('%s/login.php' % conf.website)
+        request = mechanize.Request('%s/login.php' % conf.website[0])
         response = mechanize.urlopen(request)
         forms = mechanize.ParseResponse(response)
         response.close()
@@ -249,7 +250,7 @@ def login(conf):
         login_request = form.click()
 
         login_response = mechanize.urlopen(login_request)
-        logged_in = login_response.geturl() == ('%s/index.php' % conf.website)
+        logged_in = login_response.geturl() == ('%s/index.php' % conf.website[0])
 
         if not logged_in:
             return Left('Failed to log in with these credentials')
@@ -282,7 +283,7 @@ def get_pages(conf):
         elif amount > 100:
             amount = 100
 
-        page_url = ('%s/browse.php?limit=%s%s%s' % (conf.website,
+        page_url = ('%s/browse.php?limit=%s%s%s' % (conf.website[0],
                                                     amount, order, bonus))
 
         request = mechanize.Request(page_url)
