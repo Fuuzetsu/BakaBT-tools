@@ -154,7 +154,7 @@ def get_links(conf):
             extracted.append(re.search(r'<a href="(/\d+[-_' +
                                        r'\w.]+)" style="color:', s).groups()[0])
 
-        return [ conf.website[0] + x for x in extracted ]
+        return [ conf.website + x for x in extracted ]
 
     return inner_links
 
@@ -162,7 +162,7 @@ def get_links(conf):
 def get_torrent_url(conf):
     def inner(url):
         source = get_page_source(url)
-        f = lambda x: conf.website[0] + re.search(
+        f = lambda x: conf.website + re.search(
             r'<a href="(/download/\d+/\d+/'
             + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
         return liftM(f, source)
@@ -196,7 +196,7 @@ def login(conf):
     try:
         username = conf.username[0]
         password = conf.password[0]
-        request = mechanize.Request('%s/login.php' % conf.website[0])
+        request = mechanize.Request('%s/login.php' % conf.website)
         response = mechanize.urlopen(request, timeout=conf.timeout)
         forms = mechanize.ParseResponse(response)
         response.close()
@@ -211,7 +211,7 @@ def login(conf):
 
         login_response = mechanize.urlopen(login_request, timeout=conf.timeout)
         logged_in = login_response.geturl() == ('%s/index.php'
-                                                % conf.website[0])
+                                                % conf.website)
 
         if not logged_in:
             return Left('Failed to log in with these credentials')
@@ -244,7 +244,7 @@ def get_pages(conf):
         elif amount > 100:
             amount = 100
 
-        page_url = ('%s/browse.php?limit=%s%s%s' % (conf.website[0],
+        page_url = ('%s/browse.php?limit=%s%s%s' % (conf.website,
                                                     amount, order, bonus))
 
         request = mechanize.Request(page_url)
