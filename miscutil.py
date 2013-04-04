@@ -151,12 +151,25 @@ def get_links(conf):
 
         extracted = []
         for s in sections:
+            size = re.search(r'<td class="size">([0-9]*\.?[0-9]+)'
+                             + r'\s(\w+)</td>',
+                             s).groups()
+            mb_size = convert_to_mb(size[0], size[1])
+
+            if mb_size > conf.maxsize:
+                continue
+
             extracted.append(re.search(r'<a href="(/\d+[-_' +
                                        r'\w.]+)" style="color:', s).groups()[0])
 
         return [ conf.website + x for x in extracted ]
 
     return inner_links
+
+def convert_to_mb(number, unit):
+    units = {'B': 2, 'KB': 1, 'MB': 0,
+             'GB': -1, 'TB': -2, 'PB': -2}
+    return float(number) * (1024 ** units[unit])
 
 
 def get_torrent_url(conf):
