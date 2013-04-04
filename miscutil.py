@@ -3,11 +3,10 @@ import shutil
 import urllib
 import mechanize
 import os.path
-from HTMLParser import HTMLParser
-from urllib2 import URLError
+import HTMLParser
 
 
-class BakaParser(HTMLParser):
+class BakaParser(HTMLParser.HTMLParser):
     waiting_for_pages = False
     page_links = []
 
@@ -225,6 +224,8 @@ def download(conf):
                         % (url, filename))
         except IOError:
             return Left('IOError when downloading %s to %s' % (url, filename))
+        except Exception as e:
+            return Left('%s' % e)
 
         return Right('%s downloaded to %s' % (url, filename))
 
@@ -255,10 +256,8 @@ def login(conf):
 
     except mechanize.HTTPError as resp:
         return Left('HTTPError when logging in: %s' % resp)
-    except URLError as ue:
-        return Left('URLError: %s' % ue)
-    except ValueError as ve:
-        return Left('URL value error: %s' % ve)
+    except Exception as e:
+        return Left('%s' % e)
 
     return Right('Logged in as %s' % username)
 
@@ -269,6 +268,8 @@ def get_page_source(url):
         return Left('HTTPError when fetching %s' % url)
     except ValueError as ve:
         return Left('URL value error: %s' % ve)
+    except Exception as e:
+        return Left('%s' % e)
 
 def get_pages(conf):
     try:
@@ -298,5 +299,5 @@ def get_pages(conf):
         return Left('Failed to fetch number of pages')
     except mechanize.HTTPError as me:
         return Left('Failed to reach basic search results: %s' % me)
-    except URLError as ue:
-        return Left('URLError: %s' % ue)
+    except Exception as e:
+        return Left('%s' % e)
