@@ -159,46 +159,6 @@ def get_links(conf):
     return inner_links
 
 
-def get_bonus_links(page_source):
-    sections = []
-    while '<td class="category"' in page_source:
-        cutOff = page_source.find('<td class="category"')
-        sections.append(page_source[:cutOff])
-        page_source = page_source[cutOff + 20:]
-
-    splitAlts = []
-    for s in sections:
-        if 'Alternative versions:' in s:
-            x = s.find('Alternative versions:')
-            splitAlts.append(s[:x])
-            h = s[x:]
-            while '<tr class="torrent_alt' in h:
-                x = h.find('<tr class="torrent_alt')
-                z = h.find('</tr>')
-                splitAlts.append(s[x:z + 5])
-                h = h[z + 5:]
-        else:
-            splitAlts.append(s)
-
-    bn = '<img src="/images/pixel.gif" class="icon bonusbig" alt="Bonus" title="Bonus"/>'
-    fr = '<span class="success" title="Freeleech">[F]</span>'
-
-    sections = [s for s in splitAlts if bn in s and fr in s]
-
-    #sections = ripped out sections with both, bonus and freeleech
-    extracted = []
-    for s in sections:
-        e = re.search(r'<a href="(/\d+[\w\d-]+.html)" style="color: #[\d\w]+;">', s)
-        #e = re.search(r'<a href="(/\d+[-][-_\w\d.]+.html)"', s)
-        if not e == None:
-            extracted.append(e.groups()[0])
-
-    if extracted == []:
-        print('No appropriate torrents to download.')
-    return extracted
-
-
-
 def get_torrent_url(conf):
     def inner(url):
         source = get_page_source(url)
