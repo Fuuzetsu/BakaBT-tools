@@ -20,9 +20,9 @@ def get_arg_parser():
                         help='Do not restrict results to freeleech torrents')
     parser.add_argument('-d', '--directory', default='downloads',
                         help='Download directory (default=downloads)')
-    parser.add_argument('-l', '--limit', nargs=1, default=5,
+    parser.add_argument('-l', '--limit', default=5,
                         help='Maximum number of pages (default=5)')
-    parser.add_argument('-a', '--amount', nargs=1, default=20,
+    parser.add_argument('-a', '--amount', default=20,
                         help='Torrents per page, max 100 (default=20)')
     parser.add_argument('-s', '--smallest', action='store_true', default=False,
                         help='Sort torrents by their size (default=False)')
