@@ -30,6 +30,8 @@ def get_arg_parser():
                         help='Site to use (default=http://bakabt.me)')
     parser.add_argument('-t', '--timeout', default=15.0, type=float,
                         help='Timeout for any URL request (default=15.0s)')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='Print messages during the program')
 
     return parser
 

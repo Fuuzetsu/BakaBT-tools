@@ -4,7 +4,7 @@ import urllib
 import mechanize
 import os.path
 import HTMLParser
-
+import sys
 
 class BakaParser(HTMLParser.HTMLParser):
     waiting_for_pages = False
@@ -165,7 +165,9 @@ def get_torrent_url(conf):
         f = lambda x: conf.website + re.search(
             r'<a href="(/download/\d+/\d+/'
             + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
+
         return liftM(f, source)
+
     return inner
 
 def download(conf):
@@ -188,6 +190,7 @@ def download(conf):
         except Exception as e:
             return Left('%s' % e)
 
+        if conf.verbose: sys.stdout.write('Dowloaded: %s\n' % filename)
         return Right('%s downloaded to %s' % (url, filename))
 
     return inner_download
@@ -221,6 +224,7 @@ def login(conf):
     except Exception as e:
         return Left('%s' % e)
 
+    if conf.verbose: sys.stdout.write('Logged in as %s\n' % username)
     return Right('Logged in as %s' % username)
 
 def get_page_source(conf):
@@ -258,6 +262,7 @@ def get_pages(conf):
         parser.feed(body)
         pages = int(BakaParser.page_links[-2].split('=')[-1]) + 1
         pages = conf.limit if conf.limit > 0 else pages
+        if conf.verbose: sys.stdout.write('Got %d pages\n' % pages)
         return Right([ '%s&page=%d' % (page_url, p) for p in xrange(pages) ])
     except IndexError:
         return Left('Failed to fetch number of pages')
