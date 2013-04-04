@@ -44,4 +44,7 @@ def main():
     sys.stdout.write('%s\n' % status)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
