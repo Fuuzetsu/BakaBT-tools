@@ -147,7 +147,7 @@ def get_links(conf):
                 splitAlts.append(s)
                 fr = 'title="Freeleech">[F]</span>'
                 sections = [s for s in sections
-                            if fr in s and not conf.no_freeleech]
+                            if fr in s or not conf.no_freeleech]
 
         extracted = []
         for s in sections:
