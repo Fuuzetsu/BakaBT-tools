@@ -197,7 +197,7 @@ def login(conf):
         username = conf.username[0]
         password = conf.password[0]
         request = mechanize.Request('%s/login.php' % conf.website[0])
-        response = mechanize.urlopen(request)
+        response = mechanize.urlopen(request, timeout=conf.timeout)
         forms = mechanize.ParseResponse(response)
         response.close()
 
@@ -209,8 +209,9 @@ def login(conf):
         form['password'] = password
         login_request = form.click()
 
-        login_response = mechanize.urlopen(login_request)
-        logged_in = login_response.geturl() == ('%s/index.php' % conf.website[0])
+        login_response = mechanize.urlopen(login_request, timeout=conf.timeout)
+        logged_in = login_response.geturl() == ('%s/index.php'
+                                                % conf.website[0])
 
         if not logged_in:
             return Left('Failed to log in with these credentials')
@@ -222,9 +223,9 @@ def login(conf):
 
     return Right('Logged in as %s' % username)
 
-def get_page_source(url):
+def get_page_source(conf, url):
     try:
-        return Right(mechanize.urlopen(url).read())
+        return Right(mechanize.urlopen(url, timeout=conf.timeout).read())
     except mechanize.HTTPError:
         return Left('HTTPError when fetching %s' % url)
     except ValueError as ve:
@@ -247,7 +248,7 @@ def get_pages(conf):
                                                     amount, order, bonus))
 
         request = mechanize.Request(page_url)
-        response = mechanize.urlopen(request)
+        response = mechanize.urlopen(request, timeout=conf.timeout)
         body = response.read()
         response.close()
 

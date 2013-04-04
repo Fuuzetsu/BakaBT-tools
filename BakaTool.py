@@ -21,13 +21,16 @@ def get_arg_parser():
     parser.add_argument('-d', '--directory', nargs=1, default='downloads',
                         help='Download directory (default=downloads)')
     parser.add_argument('-l', '--limit', nargs=1, default=5,
-                        help='Maximum number of pages (default 5)')
+                        help='Maximum number of pages (default=5)')
     parser.add_argument('-a', '--amount', nargs=1, default=20,
-                        help='Torrents per page, max 100 (default 20)')
+                        help='Torrents per page, max 100 (default=20)')
     parser.add_argument('-s', '--smallest', action='store_true', default=False,
-                        help='Sort torrents by their size (default False)')
-    parser.add_argument('-w', '--website', nargs=1, default=['http://bakabt.me'],
+                        help='Sort torrents by their size (default=False)')
+    parser.add_argument('-w', '--website', nargs=1,
+                        default=['http://bakabt.me'],
                         help='Site to use (default http://bakabt.me)')
+    parser.add_argument('-t', '--timeout', default=[15.0], type=float,
+                        help='Timeout for any URL request (default=15.0s)')
 
     return parser
 
@@ -38,7 +41,8 @@ def main():
 
     status = liftM(concat, (login(conf) >> get_pages(conf)).bind(
         lambda x: mapE(
-            lambda y: liftM(get_links(conf), get_page_source(y)), x))).bind(
+            lambda y: liftM(get_links(conf),
+                            get_page_source(conf, y)), x))).bind(
                 lambda z: map(klesli_comp(
                     download(conf), get_torrent_url(conf)), z))
 
