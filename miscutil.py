@@ -161,7 +161,7 @@ def get_links(conf):
 
 def get_torrent_url(conf):
     def inner(url):
-        source = get_page_source(url)
+        source = get_page_source(conf)(url)
         f = lambda x: conf.website + re.search(
             r'<a href="(/download/\d+/\d+/'
             + r'\w+/\d+/[\w_.-]+.torrent)"', x).groups()[0]
@@ -171,11 +171,11 @@ def get_torrent_url(conf):
 def download(conf):
     def inner_download(url):
         try:
-            filename = os.path.join(conf.directory[0],
+            filename = os.path.join(conf.directory,
                                     shutil.os.path.split(url)[1])
 
-            if not os.path.exists(conf.directory[0]):
-                os.makedirs(conf.directory[0])
+            if not os.path.exists(conf.directory):
+                os.makedirs(conf.directory)
 
             urllib.urlretrieve(url, filename)
             with open(filename, 'wb') as f:
@@ -194,8 +194,8 @@ def download(conf):
 
 def login(conf):
     try:
-        username = conf.username[0]
-        password = conf.password[0]
+        username = conf.username
+        password = conf.password
         request = mechanize.Request('%s/login.php' % conf.website)
         response = mechanize.urlopen(request, timeout=conf.timeout)
         forms = mechanize.ParseResponse(response)
@@ -223,15 +223,17 @@ def login(conf):
 
     return Right('Logged in as %s' % username)
 
-def get_page_source(conf, url):
-    try:
-        return Right(mechanize.urlopen(url, timeout=conf.timeout).read())
-    except mechanize.HTTPError:
-        return Left('HTTPError when fetching %s' % url)
-    except ValueError as ve:
-        return Left('URL value error: %s' % ve)
-    except Exception as e:
-        return Left('%s' % e)
+def get_page_source(conf):
+    def inner(url):
+        try:
+            return Right(mechanize.urlopen(url, timeout=conf.timeout).read())
+        except mechanize.HTTPError:
+            return Left('HTTPError when fetching %s' % url)
+        except ValueError as ve:
+            return Left('URL value error: %s' % ve)
+        except Exception as e:
+            return Left('%s' % e)
+    return inner
 
 def get_pages(conf):
     try:
